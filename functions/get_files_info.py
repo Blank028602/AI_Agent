@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 def get_files_info(working_directory, directory=None):
 
@@ -94,6 +95,45 @@ def write_file (working_directory, file_path, content):
 		return "Error: File not found"
 	except OSError:
 		return "Error: Could not access directory"
+
+def run_python_file(working_directory, file_path):
+
+	working_directory = os.path.abspath(working_directory)
+	full_file_path = os.path.join(working_directory, file_path)
+	full_file_path = os.path.abspath(full_file_path)
+	result_1 = full_file_path.startswith(working_directory)
+
+	if result_1 == False:
+		return f'Error: Cannot execute "{file_path}" as it is outside the permitted working directory'
+
+	if os.path.exists(full_file_path) == False:
+		return f'Error: File "{file_path}" not found.'
+
+	if file_path.endswith(".py") == False:
+		return f'Error: "{file_path}" is not a Python file.'
+
+	try:
+
+		result_2 = subprocess.run(["python3", os.path.basename(file_path)], timeout = 30, cwd = working_directory, capture_output = True, text = True)
+
+		if result_2.returncode != 0:
+			stdout = f"STDOUT: {result_2.stdout}"
+			stderr = f"STDERR: {result_2.stderr}"
+			std = stdout + "\n" + stderr
+			full_msg = std + "\n" + f"Process exited with code {result_2.returncode}"
+			return full_msg
+
+		elif result_2.stdout == "" and result_2.stderr == "":
+			return "No output produced"
+
+		else:
+			stdout = f"STDOUT: {result_2.stdout}"
+			stderr = f"STDERR: {result_2.stderr}"
+			std = stdout + "\n" + stderr
+			return std
+
+	except Exception as e:
+		return f"Error: executing Python file: {e}"
 
 
 
