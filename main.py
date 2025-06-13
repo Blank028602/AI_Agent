@@ -14,6 +14,9 @@ You are a helpful AI coding agent.
 When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
 
 - List files and directories
+- Read file contents
+- Execute Python files with optional arguments
+- Write or overwrite files
 
 All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
 """
@@ -31,10 +34,58 @@ schema_get_files_info = types.FunctionDeclaration(
 		required=["directory"]
 	),
 )
+schema_get_file_content = types.FunctionDeclaration(
+        name="get_file_content",
+        description="Lists the length of the specified file and returns the content, constrained to the working directory.",
+        parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                        "file_path": types.Schema(
+                                type=types.Type.STRING,
+                                description="The path to the file in question (relative to the working directory). Use '.' to indicate the working directory itself.",
+                        ),
+                },
+                required=["file_path"]
+        ),
+)
+schema_run_python_file = types.FunctionDeclaration(
+        name="run_python_file",
+        description="Runs a specified python file, constrained to the working directory.",
+        parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                        "file_path": types.Schema(
+                                type=types.Type.STRING,
+                                description="The path to the file in question (relative to the working directory). Use '.' to indicate the working directory itself.",
+                        ),
+                },
+                required=["file_path"]
+        ),
+)
+schema_write_file = types.FunctionDeclaration(
+        name="write_file",
+        description="Overwrites the content of a specified file, constrained to the working directory.",
+        parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                        "file_path": types.Schema(
+                                type=types.Type.STRING,
+                                description="The path to the file in question (relative to the working directory). Use '.' to indicate the working directory itself.",),
+			"content": types.Schema(
+				type=types.Type.STRING,
+				description="The content that overwrites the content of the given file"
+                        ),
+                },
+                required=["file_path", "content"]
+        ),
+)
 
 available_functions = types.Tool(
     function_declarations=[
         schema_get_files_info,
+	schema_get_file_content,
+	schema_run_python_file,
+	schema_write_file,
     ]
 )
 
