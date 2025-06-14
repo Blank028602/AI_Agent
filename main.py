@@ -12,14 +12,17 @@ is_verbose = False
 system_prompt = """
 You are a helpful AI coding agent.
 
-When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
+When a user asks a question or makes a request, start by exploring the directory structure to understand what files are available. Then make a function call plan based on what you discover.
 
+Always start with get_files_info to see what directories and files exist before trying to read specific files.
+
+You can perform the following operations:
 - List files and directories
 - Read file contents
 - Execute Python files with optional arguments
 - Write or overwrite files
 
-All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
+All paths you provide should be relative to the working directory.
 """
 schema_get_files_info = types.FunctionDeclaration(
 	name="get_files_info",
@@ -94,7 +97,7 @@ def call_function(function_call_part, verbose=False):
 	if verbose == True:
 		print(f"Calling function: {function_call_part.name}({function_call_part.args})")
 	else:
-		print(f" - Calling function: {function_call_part.name}")
+		print(f" - Calling function: {function_call_part.name}({function_call_part.args})")
 
 	function_map = {
 		"get_files_info": get_files_info,
@@ -135,17 +138,22 @@ if "--verbose" in sys.argv:
 if len(sys.argv) > 1:
 	user_prompt = ' '.join(sys.argv[1:])
 	messages = [types.Content(role="user", parts=[types.Part(text=user_prompt)]),]
-	response = client.models.generate_content(model =  "gemini-1.5-flash-latest", contents = messages, config=types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt),)
-	if response.function_calls:
-		function_call_result = call_function(response.function_calls[0], verbose=is_verbose)
-		if function_call_result.parts[0].function_response.response:
-			if is_verbose:
-				print(f"-> {function_call_result.parts[0].function_response.response}")
+	for i in range(20):
+		response = client.models.generate_content(model =  "gemini-1.5-flash-latest", contents = messages, config=types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt),)
+		for candidate in response.candidates:
+			 messages.append(candidate.content)
+		if response.function_calls:
+			result = call_function(response.function_calls[0])
+			messages.append(result)
 		else:
-			raise Exception("Function call didn't return expected response structure")
-	if is_verbose == True:
-		print(f"User prompt: {user_prompt}")
-		print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-		print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
-else: sys.exit(1)
+			print(response.candidates[0].content.parts[0].text)
+			break
+
+
+
+
+
+
+
+
 
